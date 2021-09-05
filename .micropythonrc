@@ -1,0 +1,22 @@
+{
+  "upload": {
+    "port": "/dev/tty.usbmodem141401",
+    "baud": 115200
+  },
+  "serial": {
+    "port": "/dev/tty.usbmodem141401",
+    "baud": 115200
+  },
+  "ignore": {
+    "extensions": [
+      ".micropythonrc"
+    ],
+    "directories": [
+      ".vscode"
+    ]
+  },
+  "tools": {
+    "ampy": "/Users/chuey/opt/anaconda3/bin/ampy",
+    "rshell": "/Users/chuey/opt/anaconda3/bin/rshell"
+  }
+}

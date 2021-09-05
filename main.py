@@ -1,0 +1,70 @@
+from machine import Pin, I2C, ADC
+import sh1106
+from time import sleep
+import framebuf
+
+i2c = I2C(0, scl=Pin(5), sda=Pin(4), freq=400000)
+display = sh1106.SH1106_I2C(128, 64, i2c, Pin(16), 0x3c, 180)
+display.sleep(False)
+display.fill(0)
+display.text('Bruh Moment', 20, 10, 1)
+display.show()
+sleep(2)
+
+# Setup pixel art
+bone = bytearray(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1f\xc0\x00\x00\x00\x00\x03\xf8\x1f\xc0\x00\x00\x00\x00\x03\xf8`8\x00\x00\x00\x00\x1c\x06`8\x00\x00\x00\x00\x1c\x06`8\x00\x00\x00\x00\x1c\x06`8\x00\x00\x00\x00\x1c\x06`8\x00\x00\x00\x00\x1c\x06`\x07\xff\xff\xff\xff\xe0\x06`\x07\xff\xff\xff\xff\xe0\x06`\x00\x00\x00\x00\x00\x00\x06`\x00\x00\x00\x00\x00\x00\x06`\x00\x00\x00\x00\x00\x00\x06\x1c\x00\x00\x00\x00\x00\x008\x1c\x00\x00\x00\x00\x00\x008\x1c\x00\x00\x00\x00\x00\x008\x1c\x00\x00\x00\x00\x00\x008\x1c\x00\x00\x00\x00\x00\x008`\x00\x00\x00\x00\x00\x00\x06`\x00\x00\x00\x00\x00\x00\x06`\x07\xff\xff\xff\xff\xe0\x06`\x07\xff\xff\xff\xff\xe0\x06`8\x00\x00\x00\x00\x1c\x06`8\x00\x00\x00\x00\x1c\x06`8\x00\x00\x00\x00\x1c\x06`8\x00\x00\x00\x00\x1c\x06`8\x00\x00\x00\x00\x1c\x06\x1f\xc0\x00\x00\x00\x00\x03\xf8\x1f\xc0\x00\x00\x00\x00\x03\xf8\x00\x00\x00\x00\x00\x00\x00\x00')
+bone_fb = framebuf.FrameBuffer(bone, 64, 32, framebuf.MONO_HLSB)
+rain = bytearray(b'\x00\x00\x00\x00\x00\x80\x00\x00\x01@\x00\x00\x02@\x00\x00\x06@\x00\x00\x04 \x00\x00\x18\x10\x00\x00\x18\x10\x00\x00\x10\x10\x00\x00 \x08\x00\x00`\x08\x00\x00`\x0c\x00\x00`\x0c\x02\x00`\x0c\x06\x00 \x18\x0e\x00\x18x\x19\x00\x0f\xe0\x11\x00\x00\x000\x80\x00\x00`\x80\x00\x00\xc0@\x00\x00\x80@\x00\x01\x80 \x00\x01\x00 \x00\x01\x00 \x00\x01\x00 \x00\x01\x80 \x00\x00\xc0\xe0\x00\x00\x7f\x80\x00\x00?\x00\x00\x00\x00\x00')
+rain_fb = framebuf.FrameBuffer(rain, 30, 30, framebuf.MONO_HLSB)
+rain_start = 30
+rain_lvl = rain_start
+meh_start = 33
+meh_lvl = meh_start
+
+# Read ADC and display
+conversion_factor = 3.3 / 65535
+moist = ADC(27)
+
+while True:
+  moist_val = moist.read_u16()
+  moistV = moist_val*conversion_factor
+  moistV = round(moistV,2)
+  display.fill(0)
+  display.rect(0,0,128,16,1)
+  display.text('SOIL MOISTURE', 12, 4, 1)
+
+  # Check soil moisture
+  if moistV > 1.9 and moistV < 2.3:
+    if meh_lvl >= 120 and meh_lvl < 128:
+      display.text('m', meh_lvl, 45, 1)
+      display.text('eh', meh_lvl-87, 45, 1)
+      meh_lvl+=1
+    if meh_lvl >= 112 and meh_lvl < 120:
+      display.text('me', meh_lvl, 45, 1)
+      display.text('h', meh_lvl-79, 45, 1)
+      meh_lvl+=1
+    if meh_lvl < 112:
+      display.text('meh', meh_lvl, 45, 1)
+      meh_lvl+=1
+    if meh_lvl >= 128:
+      meh_lvl=meh_start
+    display.text('Less moist', 25, 20, 1)
+    display.text(str(moistV), 0, 45, 1)
+
+  if moistV >= 2.3:
+    display.blit(bone_fb,33,32)
+    display.text('Im dry water mee', 0, 20, 1)
+    display.text(str(moistV), 0, 45, 1)
+
+  if moistV <=1.9:
+    if rain_lvl<64:
+      display.blit(rain_fb,53,rain_lvl)
+      display.blit(rain_fb,83,rain_lvl+5)
+      rain_lvl += 1
+    else:
+      rain_lvl=rain_start
+    display.text('Wet and squishy', 4, 20, 1)
+    display.text(str(moistV), 0, 45, 1)
+
+  display.show()
+  sleep(0.05)
